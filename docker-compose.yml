@@ -1,0 +1,60 @@
+version: "3.3"
+
+volumes:
+  postgres_data:
+
+services:
+
+  postgres:
+    image: "postgres:11.5-alpine"
+    environment:
+      POSTGRES_USER: "grafana"
+      POSTGRES_PASSWORD: "grafana"
+      POSTGRES_DB: "grafana"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    ports:
+      - "15432:5432"
+
+  grafana:
+    image: "grafana/grafana:6.3.5"
+    depends_on:
+      - postgres
+    ports:
+      - "13000:3000"
+    restart: always
+    volumes:
+      - ./grafana:/grafana
+    environment:
+      GF_PATHS_PROVISIONING: "/grafana/provisioning"
+    command: ["-config", "/grafana/custom.ini" ]
+
+  prometheus:
+    image: "prom/prometheus:v2.12.0"
+    volumes:
+      - ./prometheus/config:/prometheus/config
+      - ./prometheus/data:/prometheus/data
+    ports:
+      - "19090:9090"
+    command: ["--config.file", "/prometheus/config/prometheus.yml"]
+
+  cadvisor:
+    image: "google/cadvisor:v0.33.0"
+    ports:
+      - "18080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  node_exporter:
+    image: "prom/node-exporter:v0.18.1"
+    volumes:
+      - /:/rootfs:ro
+      - /proc:/host/proc
+      - /sys:/host/sys
+    ports:
+      - "19100:9100"
